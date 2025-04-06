@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=utf-8>
+    <title>Earth Model</title>
+    <style>
+        body { margin: 0; }
+        canvas { width: 100%; height: 100% }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.min.js"></script>
+
+</head>
+<body>
+   <script>
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        var renderer = new THREE.WebGLRenderer();
+        var controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        camera.position.z = 3;
+
+        scene.background = THREE.ImageUtils.loadTexture('images/sky-1946508_1920.png');
+
+        //Sol
+        var sunMaterial = new THREE.MeshBasicMaterial({
+            map: THREE.ImageUtils.loadTexture('images/sunmap.jpg'),
+        });
+
+        var sunGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        var sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+        sunMesh.position.set(5, 5, 5);
+
+        var sunShadowMaterial = new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        transparent: true,
+        opacity: 0
+        });
+
+        var sunShadowMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 32, 32), 
+            sunShadowMaterial
+        );
+        sunMesh.add(sunShadowMesh);
+        scene.add(sunMesh);
+
+        //Tierra
+        var geometry = new THREE.SphereGeometry(1, 32, 32);
+        var material = new THREE.MeshPhongMaterial();
+
+        material.map = THREE.ImageUtils.loadTexture('images/earthmap1k.jpg');
+
+        var ambientLight = new THREE.AmbientLight(0xffffff,0.5);
+        scene.add(ambientLight);
+        var pointLight = new THREE.PointLight(0xffffff, 0);
+        pointLight.position.set(5,5,5);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+        
+        material.bumpMap   = THREE.ImageUtils.loadTexture('images/earthbump1k.jpg');     
+        material.bumpScale = 0.4;
+
+        material.specularMap = THREE.ImageUtils.loadTexture('images/earthspec1k.jpg');
+        material.specular  = new THREE.Color('grey');
+
+        var earthmesh = new THREE.Mesh(geometry, material);
+        earthmesh.receiveShadow = true;
+
+        //Luces nocturnas
+        var nightMaterial = new THREE.MeshPhongMaterial({
+            map: THREE.ImageUtils.loadTexture('images/earthlights1k.jpg'),
+            side: THREE.DoubleSide,
+            transparent: true,
+            depthWrite: true
+        });
+
+        var nightMesh = new THREE.Mesh(geometry, nightMaterial);
+
+        //Nubes
+        var geometry   = new THREE.SphereGeometry(1.05, 32, 32)
+        var material  = new THREE.MeshPhongMaterial({
+            map         : THREE.ImageUtils.loadTexture('images/fair_clouds_4k.png'),
+            side        : THREE.DoubleSide,
+            transparent : true,
+            depthWrite  : false,
+        });
+        
+        var cloudMesh = new THREE.Mesh(geometry, material)
+        earthmesh.add(cloudMesh)
+        scene.add(earthmesh);
+        scene.add(nightMesh);
+        
+        //Luna
+        var moonGeometry = new THREE.SphereGeometry(0.27, 32, 32); 
+        var moonMaterial = new THREE.MeshPhongMaterial({
+            map: new THREE.TextureLoader().load('images/moonmap4k.jpg') 
+        });
+        
+        moonMaterial.bumpMap = new THREE.TextureLoader().load('images/moonbump4k.jpg');
+        moonMaterial.bumpScale = 0.1;
+        var moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+        moonMesh.position.set(2, 0, 0);
+        moonMesh.castShadow = true;
+        scene.add(moonMesh);
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            earthmesh.rotation.y += 0.005;
+            nightMesh.rotation.y += 0.005;
+            cloudMesh.rotation.y += 0.006;
+
+/*
+            earthmesh.rotation.x += 0.0005; 
+            nightMesh.rotation.x += 0.0005; 
+            cloudMesh.rotation.x += 0.0005;
+
+            earthmesh.rotation.z += 0.1;
+            nightMesh.rotation.z += 0.1; 
+            cloudMesh.rotation.z += 0.1;
+*/
+
+            let t = Date.now() * 0.0005;
+            let radius = 2;
+            moonMesh.position.set(radius * Math.sin(t), radius * Math.sin(t), radius * Math.cos(t));
+
+            moonMesh.rotation.y += 0.1;
+            const now = Date.now();
+            const seconds = now / 1000;
+            const speed = (2 * Math.PI) / 60;
+            const transition = (Math.sin(seconds * speed - Math.PI / 2) + 1) / 2;
+
+            pointLight.intensity = 0.2 + transition * 1.2;
+            sunShadowMesh.material.opacity = 1 - transition;
+            nightMesh.material.opacity = 1 - transition;   
+            cloudMesh.material.opacity = 0.2 + transition * 0.5;
+            controls.update(); 
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
